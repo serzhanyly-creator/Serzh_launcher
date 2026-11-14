@@ -460,7 +460,7 @@ fn android_dir() -> PathBuf {
         let ctx = ndk_context::android_context();
         if ctx.context().is_null() { return PathBuf::from("/data/local/tmp"); }
         if let Ok(vm) = jni::JavaVM::from_raw(ctx.vm().cast()) {
-            if let Ok(env) = vm.attach_current_thread() {
+if let Ok(mut env) = vm.attach_current_thread() {
                 let context = jni::objects::JObject::from_raw(ctx.context().cast());
                 if let Ok(f) = env.call_method(&context, "getFilesDir", "()Ljava/io/File;", &[]) {
                     if let Ok(f) = f.l() {
@@ -485,7 +485,7 @@ fn open_pojav() -> bool {
     unsafe {
         let ctx = ndk_context::android_context();
         let vm = match jni::JavaVM::from_raw(ctx.vm().cast()) { Ok(v) => v, Err(_) => return false };
-        let env = match vm.attach_current_thread() { Ok(e) => e, Err(_) => return false };
+        let mut env = match vm.attach_current_thread() { Ok(e) => e, Err(_) => return false };
         let context = jni::objects::JObject::from_raw(ctx.context().cast());
         let pm = match env.call_method(&context, "getPackageManager", "()Landroid/content/pm/PackageManager;", &[]) { Ok(v) => match v.l() { Ok(o) => o, Err(_) => return false }, Err(_) => return false };
         let pkg = match env.new_string("net.kdt.pojavlaunch") { Ok(s) => s, Err(_) => return false };
