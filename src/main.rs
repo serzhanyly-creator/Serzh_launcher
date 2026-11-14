@@ -501,8 +501,8 @@ fn open_pojav() -> bool { false }
 fn open_url(url: &str) {
     unsafe {
         let ctx = ndk_context::android_context();
-        if let Ok(vm) = jni::JavaVM::from_raw(ctx.vm().cast()) {
-            if let Ok(env) = vm.attach_current_thread() {
+        if let Ok(vm) = jni::JavaVM::from_raw(ctx.vm().cast();
+            if let Ok(mut env) = vm.attach_current_thread() {
                 let context = jni::objects::JObject::from_raw(ctx.context().cast());
                 if let (Ok(ic), Ok(uc)) = (env.find_class("android/content/Intent"), env.find_class("android/net/Uri")) {
                     if let Ok(u) = env.new_string(url) {
@@ -561,8 +561,6 @@ async fn main() {
             rr(x + 1.0, y + 1.0, wtx - 2.0, 38.0, 11.0, ca(c(0.09, 0.06, 0.14), a));
             txt(&app.toast, x + 20.0, y + 26.0, 13.0, ca(c(0.93, 0.914, 0.996), a));
         }
-        #[cfg(target_os = "android")]
-        macroquad::miniquad::window::show_keyboard(app.kb);
         next_frame().await;
     }
                        }
