@@ -525,6 +525,8 @@ fn open_url(url: &str) {
 fn open_url(url: &str) { let _ = std::process::Command::new("xdg-open").arg(url).spawn(); }
 
 fn window_conf() -> Conf {
+    }
+fn window_conf() -> Conf {
     Conf { window_title: "Serch Client".to_string(), window_width: 1280, window_height: 800, fullscreen: false, high_dpi: false, sample_count: 4, ..Default::default() }
 }
 
