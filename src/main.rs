@@ -208,3 +208,148 @@ fn field(app: &mut App, id: &str, x: f32, y: f32, w: f32, h: f32, ph: &str) {
     } else { while get_char_pressed().is_some() {} }
     if id == "nick" { app.f_nick = s; } else { app.f_path = s; }
 }
+fn area() -> (f32, f32, f32, f32) {
+    let h = screen_height();
+    let hh = if narrow() { 50.0 } else { 56.0 };
+    let nh = if narrow() { 62.0 } else { 0.0 };
+    let x = if narrow() { 12.0 } else { 226.0 };
+    let y = hh + 12.0;
+    let w = screen_width() - x - 12.0;
+    (x, y, w, h - y - nh - 40.0 - 12.0)
+}
+fn header(app: &mut App) {
+    let (bg, card, _, tx, _) = pal();
+    let (a1, a2) = accents(app.cfg.accent);
+    let w = screen_width();
+    let h = if narrow() { 50.0 } else { 56.0 };
+    draw_rectangle(0.0, 0.0, w, h, bg);
+    draw_rectangle(0.0, h - 1.0, w, 1.0, ca(a1, 0.3));
+    glow(24.0, h / 2.0, 40.0, ca(a1, 0.6));
+    rr(12.0, h / 2.0 - 12.0, 24.0, 24.0, 7.0, a1);
+    draw_triangle(vec2(18.0, h / 2.0 - 6.0), vec2(18.0, h / 2.0 + 6.0), vec2(30.0, h / 2.0), tx);
+    txt("SERCH CLIENT", 44.0, h / 2.0 + 6.0, if narrow() { 14.0 } else { 17.0 }, tx);
+    let name = app.acc_name();
+    let nw = tw(&name, 12.0);
+    rr(w - nw - 44.0, h / 2.0 - 15.0, nw + 30.0, 30.0, 15.0, card);
+    draw_circle(w - nw - 30.0, h / 2.0, 8.0, a2);
+    txt(&name, w - nw - 16.0, h / 2.0 + 4.0, 12.0, tx);
+}
+fn nav(app: &mut App) {
+    let (bg, _, _, tx, dim) = pal();
+    let (a1, _) = accents(app.cfg.accent);
+    let w = screen_width(); let h = screen_height();
+    if narrow() {
+        let y = h - 62.0;
+        draw_rectangle(0.0, y, w, 62.0, bg);
+        draw_rectangle(0.0, y, w, 1.0, ca(a1, 0.3));
+        let iw = w / 5.0;
+        let p = app.anim("nav", app.tab as f32);
+        rr(iw * p + iw / 2.0 - 14.0, y + 6.0, 28.0, 28.0, 9.0, ca(a1, 0.85));
+        for i in 0..5 {
+            let x = iw * i as f32;
+            let sel = i == app.tab;
+            let lw = tw(TABS[i], 8.0);
+            txt(TABS[i], x + iw / 2.0 - lw / 2.0, y + 52.0, 8.0, if sel { tx } else { dim });
+            draw_circle(x + iw / 2.0, y + 20.0, if sel { 5.0 } else { 3.0 }, if sel { tx } else { dim });
+            if tap(x, y, iw, 62.0) { app.tab = i; app.page = 0; app.snd("click"); }
+        }
+    } else {
+        draw_rectangle(0.0, 56.0, 210.0, h - 96.0, bg);
+        let p = app.anim("nav", app.tab as f32);
+        rr(10.0, 76.0 + p * 46.0, 190.0, 40.0, 12.0, ca(a1, 0.85));
+        for i in 0..5 {
+            let y = 76.0 + i as f32 * 46.0;
+            let sel = i == app.tab;
+            txt(TABS[i], 52.0, y + 26.0, 14.0, if sel { tx } else { dim });
+            draw_circle(30.0, y + 20.0, if sel { 5.0 } else { 3.0 }, if sel { tx } else { dim });
+            if tap(10.0, y, 190.0, 40.0) { app.tab = i; app.page = 0; app.snd("click"); }
+        }
+    }
+}
+fn home(app: &mut App) {
+    let (x, y, w, h) = area();
+    let (_, card, bd, tx, dim) = pal();
+    let (a1, a2) = accents(app.cfg.accent);
+    let ch = h.min(260.0);
+    rr(x, y + 3.0, w, ch, 18.0, ca(c(0.0, 0.0, 0.0), 0.35));
+    rr(x, y, w, ch, 18.0, bd);
+    rr(x + 1.0, y + 1.0, w - 2.0, ch - 2.0, 17.0, card);
+    glow(x + w * 0.8, y + 40.0, 150.0, ca(a1, 0.8));
+    let an = app.cfg.anim;
+    for p in app.parts.iter_mut() { if an { p.1 -= 0.0015 * p.2; if p.1 < -0.05 { p.1 = 1.05; } } }
+    for p in app.parts.iter() { draw_circle(x + p.0 * w, y + p.1 * ch, 1.0 + 2.0 * p.2, ca(a2, 0.18 * p.2)); }
+    txt("Добро пожаловать в", x + 24.0, y + 50.0, 12.0, dim);
+    txt("SERCH CLIENT", x + 24.0, y + 100.0, if narrow() { 30.0 } else { 42.0 }, tx);
+    txt("Покоряй мир, будь на шаг впереди.", x + 26.0, y + 128.0, 14.0, a2);
+    if btn(app, "hp", "Запустить игру", x + 24.0, y + ch - 62.0, 180.0, 44.0, true) { launch(app); }
+    if btn(app, "hs", "Настройки", x + 216.0, y + ch - 62.0, 140.0, 44.0, false) { app.tab = 3; app.snd("open"); }
+    let sy = y + ch + 16.0;
+    let rows = [("Minecraft", "1.21.4".to_string()), ("Модулей включено", app.enabled.len().to_string()), ("Аккаунт", app.acc_name())];
+    let rh = rows.len() as f32 * 30.0 + 40.0;
+    rr(x, sy, w, rh, 14.0, bd);
+    rr(x + 1.0, sy + 1.0, w - 2.0, rh - 2.0, 13.0, card);
+    txt("Статус", x + 14.0, sy + 26.0, 14.0, tx);
+    for (i, r) in rows.iter().enumerate() {
+        txt(r.0, x + 14.0, sy + 50.0 + i as f32 * 28.0, 12.0, dim);
+        let vw = tw(&r.1, 12.0);
+        txt(&r.1, x + w - vw - 14.0, sy + 50.0 + i as f32 * 28.0, 12.0, tx);
+    }
+}
+fn modules(app: &mut App) {
+    let (x, y, w, h) = area();
+    let (_, card, bd, tx, dim) = pal();
+    let (a1, a2) = accents(app.cfg.accent);
+    txt("Модули", x, y + 20.0, 22.0, tx);
+    let mut cx = x; let mut cy = y + 32.0;
+    for i in 0..CATS.len() {
+        let label = CATS[i];
+        let cw = tw(label, 12.0) + 28.0;
+        if cx + cw > x + w { cx = x; cy += 38.0; }
+        let sel = i == app.cat;
+        let hov = hit(cx, cy, cw, 32.0);
+        let a = app.anim(&format!("cat{}", i), if hov || sel { 1.0 } else { 0.0 });
+        if sel { rr(cx, cy, cw, 32.0, 10.0, mix(a1, a2, 0.5)); }
+        else { rr(cx, cy, cw, 32.0, 10.0, mix(bd, a2, a * 0.5)); rr(cx + 1.0, cy + 1.0, cw - 2.0, 30.0, 9.0, card); }
+        txt(label, cx + 14.0, cy + 21.0, 12.0, if sel { tx } else { dim });
+        if tap(cx, cy, cw, 32.0) { app.cat = i; app.page = 0; app.snd("click"); }
+        cx += cw + 8.0;
+    }
+    let gy = cy + 42.0;
+    let gh = (y + h - gy - 46.0).max(80.0);
+    let list: Vec<usize> = MODULES.iter().enumerate().filter(|(_, m)| app.cat == 0 || m.1 == CATS[app.cat]).map(|(i, _)| i).collect();
+    let cols = ((w + 12.0) / (CARD_W + 12.0)).max(1.0) as usize;
+    let rows = ((gh + 12.0) / (CARD_H + 12.0)).max(1.0) as usize;
+    let per = (cols * rows).max(1);
+    let pages = ((list.len() + per - 1) / per).max(1);
+    if app.page >= pages { app.page = pages - 1; }
+    let start = app.page * per;
+    let end = (start + per).min(list.len());
+    for n in start..end {
+        let idx = list[n];
+        let m = MODULES[idx];
+        let k = n - start;
+        let cx2 = x + (k % cols) as f32 * (CARD_W + 12.0);
+        let cy2 = gy + (k / cols) as f32 * (CARD_H + 12.0);
+        let hov = hit(cx2, cy2, CARD_W, CARD_H);
+        let a = app.anim(&format!("m{}", idx), if hov { 1.0 } else { 0.0 });
+        rr(cx2, cy2 + 3.0, CARD_W, CARD_H, 14.0, ca(c(0.0, 0.0, 0.0), 0.35));
+        rr(cx2, cy2, CARD_W, CARD_H, 14.0, mix(bd, a2, a * 0.6));
+        rr(cx2 + 1.0, cy2 + 1.0, CARD_W - 2.0, CARD_H - 2.0, 13.0, mix(card, c(0.13, 0.085, 0.2), a));
+        txt(m.0, cx2 + 14.0, cy2 + 30.0, 15.0, tx);
+        txt(m.2, cx2 + 14.0, cy2 + 52.0, 11.0, dim);
+        let chw = tw(m.1, 10.0) + 16.0;
+        rr(cx2 + CARD_W - chw - 12.0, cy2 + 14.0, chw, 20.0, 8.0, c(0.14, 0.086, 0.204));
+        txt(m.1, cx2 + CARD_W - chw - 4.0, cy2 + 28.0, 10.0, dim);
+        let on = app.enabled.iter().any(|e| e == m.0);
+        if let Some(new) = toggle(app, &format!("t{}", idx), on, cx2 + 14.0, cy2 + CARD_H - 34.0) {
+            if new { app.enabled.push(m.0.to_string()); } else { app.enabled.retain(|e| e != m.0); }
+            app.save_all();
+        }
+    }
+    let by = y + h - 40.0;
+    if btn(app, "prev", "Назад", x, by, 100.0, 34.0, false) { if app.page > 0 { app.page -= 1; } }
+    let pl = format!("{}/{}", app.page + 1, pages);
+    let pw = tw(&pl, 12.0);
+    txt(&pl, x + w / 2.0 - pw / 2.0, by + 22.0, 12.0, dim);
+    if btn(app, "next", "Вперёд", x + w - 100.0, by, 100.0, 34.0, false) { if app.page + 1 < pages { app.page += 1; } }
+}
