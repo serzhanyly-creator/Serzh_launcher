@@ -353,3 +353,97 @@ fn modules(app: &mut App) {
     txt(&pl, x + w / 2.0 - pw / 2.0, by + 22.0, 12.0, dim);
     if btn(app, "next", "Вперёд", x + w - 100.0, by, 100.0, 34.0, false) { if app.page + 1 < pages { app.page += 1; } }
 }
+fn accounts(app: &mut App) {
+    let (x, y, w, h) = area();
+    let (_, card, bd, tx, dim) = pal();
+    let (_, a2) = accents(app.cfg.accent);
+    txt("Аккаунты", x, y + 20.0, 22.0, tx);
+    field(app, "nick", x, y + 32.0, w - 130.0, 36.0, "Никнейм...");
+    if btn(app, "add", "Добавить", x + w - 120.0, y + 32.0, 120.0, 36.0, true) {
+        let name = app.f_nick.trim().to_string();
+        if name.is_empty() || app.accs.accounts.iter().any(|a| a.name.eq_ignore_ascii_case(&name)) { app.snd("error"); app.say("Пустой или уже есть"); }
+        else {
+            app.accs.accounts.push(Acc { name: name.clone(), uuid: uuid_of(&name) });
+            if app.accs.selected.is_empty() { app.accs.selected = name.clone(); }
+            app.f_nick.clear();
+            app.save_all();
+            app.say("Аккаунт добавлен");
+        }
+    }
+    let ly = y + 80.0;
+    let lh = (y + h - ly - 46.0).max(60.0);
+    let per = ((lh + 8.0) / 56.0).max(1.0) as usize;
+    let total = app.accs.accounts.len();
+    let pages = ((total + per - 1) / per).max(1);
+    if app.page >= pages { app.page = pages - 1; }
+    let start = app.page * per;
+    let end = (start + per).min(total);
+    for i in start..end {
+        let a = app.accs.accounts[i].clone();
+        let ry = ly + (i - start) as f32 * 56.0;
+        let sel = a.name == app.accs.selected;
+        let hov = hit(x, ry, w, 48.0);
+        let an = app.anim(&format!("a{}", i), if hov { 1.0 } else { 0.0 });
+        rr(x, ry + 3.0, w, 48.0, 12.0, ca(c(0.0, 0.0, 0.0), 0.35));
+        rr(x, ry, w, 48.0, 12.0, if sel { a2 } else { mix(bd, a2, an * 0.5) });
+        rr(x + 1.0, ry + 1.0, w - 2.0, 46.0, 11.0, mix(card, c(0.13, 0.085, 0.2), an));
+        draw_circle(x + 26.0, ry + 24.0, 13.0, if sel { a2 } else { c(0.14, 0.086, 0.204) });
+        txt(&a.name, x + 48.0, ry + 22.0, 14.0, if sel { a2 } else { tx });
+        let us = &a.uuid[..16.min(a.uuid.len())];
+        txt(us, x + 48.0, ry + 38.0, 10.0, dim);
+        if btn(app, &format!("sel{}", i), "Выбрать", x + w - 160.0, ry + 8.0, 100.0, 32.0, sel) { app.accs.selected = a.name.clone(); app.save_all(); app.say("Выбран аккаунт"); }
+        if btn(app, &format!("del{}", i), "X", x + w - 52.0, ry + 8.0, 40.0, 32.0, false) {
+            app.accs.accounts.retain(|z| z.name != a.name);
+            if app.accs.selected == a.name { app.accs.selected.clear(); }
+            app.save_all(); app.snd("close");
+            break;
+        }
+    }
+    let by = y + h - 40.0;
+    if btn(app, "aprev", "Назад", x, by, 100.0, 34.0, false) { if app.page > 0 { app.page -= 1; } }
+    if btn(app, "anext", "Вперёд", x + w - 100.0, by, 100.0, 34.0, false) { if app.page + 1 < pages { app.page += 1; } }
+}
+fn settings(app: &mut App) {
+    let (x, y, w, _h) = area();
+    let (_, card, bd, tx, dim) = pal();
+    txt("Настройки", x, y + 20.0, 22.0, tx);
+    let pw = w.min(640.0);
+    let ph = 430.0;
+    rr(x, y + 32.0, pw, ph, 14.0, bd);
+    rr(x + 1.0, y + 33.0, pw - 2.0, ph - 2.0, 13.0, card);
+    let mut yy = y + 48.0;
+    txt("Громкость", x + 16.0, yy + 20.0, 12.0, dim);
+    if let Some(v) = slider(app, "vol", app.cfg.vol, 0.0, 1.0, x + 150.0, yy + 14.0, pw - 240.0) { app.cfg.vol = v; }
+    yy += 40.0;
+    txt("Анимации", x + 16.0, yy + 20.0, 12.0, dim);
+    if let Some(v) = toggle(app, "anim", app.cfg.anim, x + 150.0, yy + 6.0) { app.cfg.anim = v; }
+    yy += 40.0;
+    txt("Акцент темы", x + 16.0, yy + 20.0, 12.0, dim);
+    let names = ["Aurora", "Neon", "Sunset", "Void"];
+    if btn(app, "acc", names[app.cfg.accent.clamp(0, 3) as usize], x + 150.0, yy, 160.0, 32.0, false) { app.cfg.accent = (app.cfg.accent + 1) % 4; app.snd("toggle_on"); }
+    yy += 44.0;
+    txt("Путь config чита", x + 16.0, yy + 20.0, 12.0, dim);
+    field(app, "path", x + 150.0, yy, pw - 170.0, 34.0, "авто");
+    yy += 48.0;
+    if btn(app, "save", "Сохранить", x + 150.0, yy, 180.0, 40.0, true) {
+        app.cfg.shared = app.f_path.trim().to_string();
+        app.save_all();
+        app.accs = load(app.shared().join("accounts.json"));
+        app.enabled = load(app.shared().join("modules.json"));
+        app.say("Сохранено");
+    }
+    yy += 52.0;
+    if cfg!(target_os = "android") {
+        if btn(app, "pojav", "Открыть PojavLauncher", x + 150.0, yy, 220.0, 40.0, false) { launch(app); }
+    }
+}
+fn info(app: &mut App) {
+    let (x, y, _w, _h) = area();
+    let (_, _, _, _, dim) = pal();
+    let (_, a2) = accents(app.cfg.accent);
+    txt("SERCH CLIENT v2.5", x, y + 30.0, 26.0, a2);
+    let lines = ["Мощный и удобный клиент для Minecraft.", "Создан для тех, кто ценит свободу и стиль.", "", "Побеждает не тот, кто сильнее, а тот, кто умнее.", "", "Движок лаунчера: Rust + macroquad", "Сборка: GitHub Actions -> APK"];
+    let mut yy = y + 60.0;
+    for l in lines { txt(l, x, yy, 13.0, dim); yy += 24.0; }
+    if btn(app, "tg", "Telegram", x, yy + 10.0, 120.0, 36.0, false) { open_url("https://t.me/"); }
+}
