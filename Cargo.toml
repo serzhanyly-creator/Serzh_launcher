@@ -3,6 +3,9 @@ name = "serch-launcher"
 version = "2.5.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 macroquad = "0.4"
 serde = { version = "1", features = ["derive"] }
