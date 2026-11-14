@@ -447,3 +447,122 @@ fn info(app: &mut App) {
     for l in lines { txt(l, x, yy, 13.0, dim); yy += 24.0; }
     if btn(app, "tg", "Telegram", x, yy + 10.0, 120.0, 36.0, false) { open_url("https://t.me/"); }
 }
+fn launch(app: &mut App) {
+    app.snd("launch");
+    if cfg!(target_os = "android") {
+        if open_pojav() { app.say("Открываю PojavLauncher"); } else { app.say("PojavLauncher не найден"); app.snd("error"); }
+    } else { app.say("На ПК: используй desktop-сборку"); }
+}
+
+#[cfg(target_os = "android")]
+fn android_dir() -> PathBuf {
+    unsafe {
+        let ctx = ndk_context::android_context();
+        if ctx.context().is_null() { return PathBuf::from("/data/local/tmp"); }
+        if let Ok(vm) = jni::JavaVM::from_raw(ctx.vm().cast()) {
+            if let Ok(env) = vm.attach_current_thread() {
+                let context = jni::objects::JObject::from_raw(ctx.context().cast());
+                if let Ok(f) = env.call_method(&context, "getFilesDir", "()Ljava/io/File;", &[]) {
+                    if let Ok(f) = f.l() {
+                        if let Ok(p) = env.call_method(&f, "getAbsolutePath", "()Ljava/lang/String;", &[]) {
+                            if let Ok(s) = p.l() {
+                                let js: jni::objects::JString = s.into();
+                                if let Ok(r) = env.get_string(&js) { return PathBuf::from(r.to_string_lossy().to_string()); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    PathBuf::from("/data/local/tmp")
+}
+#[cfg(not(target_os = "android"))]
+fn android_dir() -> PathBuf { home() }
+
+#[cfg(target_os = "android")]
+fn open_pojav() -> bool {
+    unsafe {
+        let ctx = ndk_context::android_context();
+        let vm = match jni::JavaVM::from_raw(ctx.vm().cast()) { Ok(v) => v, Err(_) => return false };
+        let env = match vm.attach_current_thread() { Ok(e) => e, Err(_) => return false };
+        let context = jni::objects::JObject::from_raw(ctx.context().cast());
+        let pm = match env.call_method(&context, "getPackageManager", "()Landroid/content/pm/PackageManager;", &[]) { Ok(v) => match v.l() { Ok(o) => o, Err(_) => return false }, Err(_) => return false };
+        let pkg = match env.new_string("net.kdt.pojavlaunch") { Ok(s) => s, Err(_) => return false };
+        let intent = match env.call_method(&pm, "getLaunchIntentForPackage", "(Ljava/lang/String;)Landroid/content/Intent;", &[(&pkg).into()]) { Ok(v) => match v.l() { Ok(o) => o, Err(_) => return false }, Err(_) => return false };
+        if intent.is_null() { return false; }
+        env.call_method(&context, "startActivity", "(Landroid/content/Intent;)V", &[(&intent).into()]).is_ok()
+    }
+}
+#[cfg(not(target_os = "android"))]
+fn open_pojav() -> bool { false }
+
+#[cfg(target_os = "android")]
+fn open_url(url: &str) {
+    unsafe {
+        let ctx = ndk_context::android_context();
+        if let Ok(vm) = jni::JavaVM::from_raw(ctx.vm().cast()) {
+            if let Ok(env) = vm.attach_current_thread() {
+                let context = jni::objects::JObject::from_raw(ctx.context().cast());
+                if let (Ok(ic), Ok(uc)) = (env.find_class("android/content/Intent"), env.find_class("android/net/Uri")) {
+                    if let Ok(u) = env.new_string(url) {
+                        if let Ok(uri) = env.call_static_method(uc, "parse", "(Ljava/lang/String;)Landroid/net/Uri;", &[(&u).into()]) {
+                            if let Ok(uo) = uri.l() {
+                                if let Ok(act) = env.new_string("android.intent.action.VIEW") {
+                                    if let Ok(i) = env.new_object(ic, "(Ljava/lang/String;Landroid/net/Uri;)V", &[(&act).into(), (&uo).into()]) {
+                                        let _ = env.call_method(&context, "startActivity", "(Landroid/content/Intent;)V", &[(&i).into()]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+#[cfg(not(target_os = "android"))]
+fn open_url(url: &str) { let _ = std::process::Command::new("xdg-open").arg(url).spawn(); }
+
+fn window_conf() -> Conf {
+    Conf { window_title: "Serch Client".to_string(), window_width: 1280, window_height: 800, fullscreen: false, high_dpi: false, sample_count: 4, ..Default::default() }
+}
+
+#[macroquad::main(window_conf)]
+async fn main() {
+    let mut app = App::new();
+    loop {
+        app.dt = get_frame_time().clamp(0.001, 0.1);
+        app.t += app.dt;
+        app.kb = false;
+        let (bg, _, _, _, _) = pal();
+        let (a1, a2) = accents(app.cfg.accent);
+        clear_background(bg);
+        glow(screen_width() * 0.9, screen_height() * 0.1, 300.0, ca(a1, 0.25));
+        glow(screen_width() * 0.1, screen_height() * 0.95, 260.0, ca(a2, 0.18));
+        header(&mut app);
+        nav(&mut app);
+        match app.tab { 0 => home(&mut app), 1 => modules(&mut app), 2 => accounts(&mut app), 3 => settings(&mut app), _ => info(&mut app) }
+        let h = screen_height();
+        let nh = if narrow() { 62.0 } else { 0.0 };
+        let sy = h - 40.0 - nh;
+        let (sb, _, _, _, _) = pal();
+        draw_rectangle(0.0, sy, screen_width(), 40.0, sb);
+        draw_circle(18.0, sy + 20.0, 4.0, c(0.13, 0.77, 0.37));
+        txt("Готов к игре", 28.0, sy + 24.0, 10.0, c(0.13, 0.77, 0.37));
+        if btn(&mut app, "stl", "Запустить игру", screen_width() - 172.0, sy + 4.0, 160.0, 32.0, true) { launch(&mut app); }
+        if app.toast_t > 0.0 {
+            app.toast_t -= app.dt;
+            let a = (app.toast_t / 2.5).clamp(0.0, 1.0);
+            let wtx = tw(&app.toast, 13.0) + 40.0;
+            let x = (screen_width() - wtx) / 2.0;
+            let y = h - 110.0 - nh;
+            rr(x, y, wtx, 40.0, 12.0, ca(a2, a));
+            rr(x + 1.0, y + 1.0, wtx - 2.0, 38.0, 11.0, ca(c(0.09, 0.06, 0.14), a));
+            txt(&app.toast, x + 20.0, y + 26.0, 13.0, ca(c(0.93, 0.914, 0.996), a));
+        }
+        #[cfg(target_os = "android")]
+        macroquad::miniquad::window::show_keyboard(app.kb);
+        next_frame().await;
+    }
+                       }
