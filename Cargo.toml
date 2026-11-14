@@ -21,8 +21,8 @@ ndk-context = "0.1"
 build_targets = ["aarch64-linux-android"]
 
 [package.metadata.android.sdk]
-min_target_version = 21
-target_version = 34
+min_sdk_version = 21
+target_sdk_version = 34
 
 [profile.release]
 opt-level = 2
