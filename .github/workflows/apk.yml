@@ -8,10 +8,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
-      - name: Show env
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          ls "$ANDROID_HOME/ndk" || true
       - name: Setup NDK
         run: |
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
@@ -21,7 +17,10 @@ jobs:
             NDK="$SDK/ndk/27.2.12479018"
           fi
           echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
-          echo "NDK=$NDK"
+      - name: Setup SDK platform
+        run: |
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" > /dev/null || true
       - name: Install cargo-apk
         run: cargo install cargo-apk --locked
       - name: Build APK
