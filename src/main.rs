@@ -500,8 +500,8 @@ fn open_pojav() -> bool { false }
 #[cfg(target_os = "android")]
 fn open_url(url: &str) {
     unsafe {
-        let ctx = ndk_context::android_context();
-        if let Ok(vm) = jni::JavaVM::from_raw(ctx.vm().cast();
+        let ctx = ndk_context::android_context();{
+        if let Ok(vm) = jni::JavaVM::from_raw(ctx.vm().cast()) {
             if let Ok(mut env) = vm.attach_current_thread() {
                 let context = jni::objects::JObject::from_raw(ctx.context().cast());
                 if let (Ok(ic), Ok(uc)) = (env.find_class("android/content/Intent"), env.find_class("android/net/Uri")) {
