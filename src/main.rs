@@ -108,7 +108,7 @@ impl App {
         }
         home().join(".minecraft/config/searchclient")
     }
-    fn new() -> App {
+    async fn new() -> App {
         let cfg: Cfg = load(home().join("serch-config.json"));
         let mut a = App {
             cfg, accs: Accs::default(), enabled: vec![],
@@ -124,7 +124,7 @@ impl App {
         a.enabled = load(a.shared().join("modules.json"));
         for n in ["click", "toggle_on", "toggle_off", "open", "close", "launch", "error"] {
             for pre in ["assets/sounds/", "sounds/"] {
-                if let Ok(s) = load_sound(&format!("{}{}.ogg", pre, n)) { a.sounds.insert(n.to_string(), s); break; }
+                if let Ok(s) = load_sound(&format!("{}{}.ogg", pre, n)).await { a.sounds.insert(n.to_string(), s); break; }
             }
         }
         a
@@ -531,7 +531,7 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut app = App::new();
+    let mut app = App::new().await;
     loop {
         app.dt = get_frame_time().clamp(0.001, 0.1);
         app.t += app.dt;
