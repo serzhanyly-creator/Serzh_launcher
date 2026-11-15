@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use macroquad::audio::{Sound, load_sound, play_sound_once, PlaySoundParams};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -60,7 +61,7 @@ fn glow(x: f32, y: f32, r: f32, col: Color) {
     for i in 0..4 { draw_circle(x, y, r * (1.0 - i as f32 * 0.22), ca(col, col.a * 0.10)); }
 }
 fn txt(s: &str, x: f32, y: f32, size: f32, col: Color) { draw_text(s, x, y, size, col); }
-fn tw(s: &str, size: f32) -> f32 { measure_text(s, None, size as u16).width }
+fn tw(s: &str, size: f32) -> f32 { measure_text(s, None, size as u16, 1.0).width }
 fn hit(x: f32, y: f32, w: f32, h: f32) -> bool {
     let (mx, my) = mouse_position();
     mx >= x && mx <= x + w && my >= y && my <= y + h
@@ -266,7 +267,7 @@ fn nav(app: &mut App) {
         }
     }
 }
-fn home(app: &mut App) {
+fn tab_home(app: &mut App) {
     let (x, y, w, h) = area();
     let (_, card, bd, tx, dim) = pal();
     let (a1, a2) = accents(app.cfg.accent);
@@ -467,7 +468,7 @@ if let Ok(mut env) = vm.attach_current_thread() {
                         if let Ok(p) = env.call_method(&f, "getAbsolutePath", "()Ljava/lang/String;", &[]) {
                             if let Ok(s) = p.l() {
                                 let js: jni::objects::JString = s.into();
-                                if let Ok(r) = env.get_string(&js) { return PathBuf::from(r.to_string_lossy().to_string()); }
+                                let gs = env.get_string(&js); if let Ok(r) = gs { let p: String = r.into(); return PathBuf::from(p); }
                             }
                         }
                     }
@@ -542,7 +543,7 @@ async fn main() {
         glow(screen_width() * 0.1, screen_height() * 0.95, 260.0, ca(a2, 0.18));
         header(&mut app);
         nav(&mut app);
-        match app.tab { 0 => home(&mut app), 1 => modules(&mut app), 2 => accounts(&mut app), 3 => settings(&mut app), _ => info(&mut app) }
+        match app.tab { 0 => tab_home(&mut app), 1 => modules(&mut app), 2 => accounts(&mut app), 3 => settings(&mut app), _ => info(&mut app) }
         let h = screen_height();
         let nh = if narrow() { 62.0 } else { 0.0 };
         let sy = h - 40.0 - nh;
