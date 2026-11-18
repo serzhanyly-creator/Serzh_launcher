@@ -261,3 +261,9 @@ async fn main() {
         next_frame().await;
     }
 }
+
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub extern "C" fn quad_main() {
+    main();
+}
