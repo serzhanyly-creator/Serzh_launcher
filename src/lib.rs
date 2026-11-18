@@ -1,3 +1,4 @@
+use macroquad::audio::{Sound, load_sound, play_sound_once};
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
